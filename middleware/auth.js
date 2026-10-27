@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken'); //Middleware auth
 
 // Checks the JWT and puts user info on req.user
 function authenticate(req, res, next) {
