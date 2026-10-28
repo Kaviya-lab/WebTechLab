@@ -24,4 +24,9 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
+const db = require('./config/db');
+db.query('SELECT 1')
+  .then(() => console.log('MySQL connected'))
+  .catch(err => console.error('MySQL connection failed:', err.message));
+
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
