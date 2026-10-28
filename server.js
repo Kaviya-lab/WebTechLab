@@ -30,3 +30,6 @@ db.query('SELECT 1')
   .catch(err => console.error('MySQL connection failed:', err.message));
 
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/categories', require('./routes/categories'));
+app.use('/api/products', require('./routes/products'));
