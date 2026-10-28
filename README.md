@@ -81,16 +81,6 @@ Suggested folder layout:
         login.html
         ... (all the other html pages)
 
-Create a `.env` file:
-
-    PORT=3000
-    DB_HOST=localhost
-    DB_USER=root
-    DB_PASSWORD=yourpassword
-    DB_NAME=marketplace
-    JWT_SECRET=something_long_and_random
-
-Add `.env`, `node_modules` and `public/uploads` to `.gitignore` so they don't get pushed.
 
 
 ## 3. Build the database first
