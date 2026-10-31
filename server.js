@@ -33,3 +33,17 @@ app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/products', require('./routes/products'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/categories', require('./routes/categories'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/cart', require('./routes/cart'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/orders', require('./routes/sellerOrders'));
+app.use('/api/profile', require('./routes/profile'));
+app.use('/api/customers', require('./routes/customers'));
+app.use('/api/sellers', require('./routes/sellers'));
+app.use('/api/admins', require('./routes/admins'));
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/seller-reports', require('./routes/sellerReports'));
+app.use('/api/logs', require('./routes/logs'));
+app.use('/api/settings', require('./routes/settings'));
