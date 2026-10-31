@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Products – Marketplace Seller</title>
+  <meta name="description" content="Manage your product listings on Marketplace." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/seller.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <div class="page-header">
+      <h1>My Products</h1>
+      <a href="/add-product.html" class="btn">+ Add New Product</a>
+    </div>
+
+    <div id="msg" class="alert hidden"></div>
+    <div id="loading" class="spinner"></div>
+
+    <div id="empty" class="empty-state hidden">
+      <div class="icon">📦</div>
+      <h2>No products yet</h2>
+      <p><a href="/add-product.html" class="btn" style="margin-top:12px;">Add your first product</a></p>
+    </div>
+
+    <div class="table-wrap hidden" id="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="products-body"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Marketplace. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/seller-products.js"></script>
+</body>
+</html>

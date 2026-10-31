@@ -1,1 +1,202 @@
+// routes/sellerOrders  (required by server.js as './routes/sellerOrders')
+// Person B – Seller Order Fulfillment Tracking API
+// Mounted at /api/orders in server.js (alongside Person A's routes/orders)
 
+const express = require('express');
+const db = require('../config/db');
+const { authenticate, allowRoles } = require('../middleware/auth');
+const { logAction } = require('../middleware/logger');
+
+const router = express.Router();
+
+const sellerOnly = [authenticate, allowRoles('seller')];
+
+// ── Allowed item_status transitions ─────────────────────────────────────────
+// A seller may only move status forward or cancel.
+// 'delivered' and 'cancelled' are terminal states.
+const ALLOWED_TRANSITIONS = {
+  pending:    ['processing', 'cancelled'],
+  processing: ['shipped',    'cancelled'],
+  shipped:    ['delivered',  'cancelled'],
+  delivered:  [],      // terminal
+  cancelled:  []       // terminal
+};
+
+// ── Aggregate order_status from all item statuses for one order ──────────────
+// Rules agreed with Person A (document in integration contract):
+//
+//   All items cancelled                          → 'cancelled'
+//   All non-cancelled items delivered            → 'delivered'
+//   Any non-cancelled item shipped (none delivered yet) → 'shipped'
+//   Any non-cancelled item processing            → 'confirmed'
+//   All non-cancelled items pending              → 'pending'
+//
+function calcOrderStatus(allItemStatuses) {
+  const nonCancelled = allItemStatuses.filter(s => s !== 'cancelled');
+
+  if (nonCancelled.length === 0)                          return 'cancelled';
+  if (nonCancelled.every(s => s === 'delivered'))         return 'delivered';
+  if (nonCancelled.some(s => s === 'shipped'))            return 'shipped';
+  if (nonCancelled.some(s => s === 'processing'))         return 'confirmed';
+  return 'pending';
+}
+
+// ============================================================================
+// GET /api/orders/seller
+// Returns all order items belonging to the authenticated seller,
+// grouped by order. Customer name limited to first name for privacy.
+// ============================================================================
+router.get('/seller', sellerOnly, async (req, res, next) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT
+         oi.order_item_id,
+         oi.order_id,
+         oi.product_id,
+         oi.quantity,
+         oi.price,
+         oi.subtotal,
+         oi.item_status,
+         p.product_name,
+         o.order_date,
+         o.order_status,
+         o.shipping_address,
+         u.name AS customer_name
+       FROM order_items oi
+       JOIN products p  ON p.product_id   = oi.product_id
+       JOIN orders   o  ON o.order_id     = oi.order_id
+       JOIN users    u  ON u.user_id      = o.customer_id
+       WHERE oi.seller_id = ?
+       ORDER BY o.order_date DESC, oi.order_id, oi.order_item_id`,
+      [req.user.id]
+    );
+
+    // Group items by order
+    const ordersMap = new Map();
+    for (const row of rows) {
+      if (!ordersMap.has(row.order_id)) {
+        ordersMap.set(row.order_id, {
+          order_id:        row.order_id,
+          order_date:      row.order_date,
+          order_status:    row.order_status,
+          shipping_address: row.shipping_address,
+          customer_name:   row.customer_name.split(' ')[0], // first name only
+          items:           []
+        });
+      }
+      ordersMap.get(row.order_id).items.push({
+        order_item_id: row.order_item_id,
+        product_id:    row.product_id,
+        product_name:  row.product_name,
+        quantity:      row.quantity,
+        price:         row.price,
+        subtotal:      row.subtotal,
+        item_status:   row.item_status
+      });
+    }
+
+    res.json({ success: true, orders: [...ordersMap.values()] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// PUT /api/orders/items/:order_item_id/status
+// Update the fulfillment status of a single order item.
+//
+// Security:
+//   - seller_id is read from the DB row, never trusted from the request
+//   - Ownership: oi.seller_id must equal req.user.id
+//   - Transition: only allowed next states accepted
+//   - Transaction: item_status update + orders.order_status recalculation
+//     happen atomically so they can never be out of sync
+// ============================================================================
+router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) => {
+  const conn = await db.getConnection();
+  try {
+    const { status } = req.body;
+    const { order_item_id } = req.params;
+
+    if (!status) {
+      conn.release();
+      return res.status(400).json({ success: false, message: 'status is required in request body' });
+    }
+
+    // 1. Fetch the item (includes seller_id from DB – never from request)
+    const [items] = await conn.query(
+      `SELECT order_item_id, seller_id, order_id, item_status
+       FROM order_items WHERE order_item_id = ?`,
+      [order_item_id]
+    );
+
+    if (items.length === 0) {
+      conn.release();
+      return res.status(404).json({ success: false, message: 'Order item not found' });
+    }
+
+    const item = items[0];
+
+    // 2. Ownership check – never trust seller_id from the request
+    if (item.seller_id !== req.user.id) {
+      conn.release();
+      return res.status(403).json({ success: false, message: 'Access denied: this item does not belong to you' });
+    }
+
+    // 3. Validate transition
+    const allowed = ALLOWED_TRANSITIONS[item.item_status] || [];
+    if (!allowed.includes(status)) {
+      conn.release();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change status from '${item.item_status}' to '${status}'. ` +
+                 `Allowed: ${allowed.length ? allowed.join(', ') : 'none (terminal state)'}`
+      });
+    }
+
+    // 4. Begin transaction – update item + recalculate order status atomically
+    await conn.beginTransaction();
+
+    await conn.query(
+      'UPDATE order_items SET item_status = ? WHERE order_item_id = ?',
+      [status, order_item_id]
+    );
+
+    // Fetch all item statuses for this order (including the just-updated row)
+    const [allItems] = await conn.query(
+      'SELECT item_status FROM order_items WHERE order_id = ?',
+      [item.order_id]
+    );
+    const newOrderStatus = calcOrderStatus(allItems.map(i => i.item_status));
+
+    await conn.query(
+      'UPDATE orders SET order_status = ? WHERE order_id = ?',
+      [newOrderStatus, item.order_id]
+    );
+
+    await conn.commit();
+
+    await logAction(
+      req.user.id,
+      'ORDER_ITEM_STATUS',
+      `Order item ${order_item_id} status: ${item.item_status} → ${status} (order ${item.order_id} now ${newOrderStatus})`,
+      req.ip
+    );
+
+    res.json({
+      success: true,
+      message: 'Item status updated',
+      item_status:   status,
+      order_status:  newOrderStatus,
+      order_item_id: parseInt(order_item_id, 10),
+      order_id:      item.order_id
+    });
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    next(err);
+  } finally {
+    conn.release();
+  }
+});
+
+module.exports = router;

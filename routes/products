@@ -1,1 +1,304 @@
+// routes/products  (required by server.js as './routes/products')
+// Person B – Product API
+// Mounted at /api/products in server.js
 
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const db = require('../config/db');
+const { authenticate, allowRoles } = require('../middleware/auth');
+const { logAction } = require('../middleware/logger');
+
+const router = express.Router();
+
+// ── Multer image upload setup ────────────────────────────────────────────────
+const uploadsDir = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const safe = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    cb(null, `${Date.now()}-${safe}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    if (/^image\//.test(file.mimetype)) return cb(null, true);
+    cb(new Error('Only image files are allowed'));
+  }
+});
+
+// ── Role guards ──────────────────────────────────────────────────────────────
+const sellerOnly = [authenticate, allowRoles('seller')];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function validateProduct(body) {
+  const { product_name, price, stock_quantity } = body;
+  if (!product_name || !String(product_name).trim()) {
+    return 'Product name is required';
+  }
+  if (price === undefined || price === '' || isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+    return 'Price must be a non-negative number';
+  }
+  if (stock_quantity !== undefined && stock_quantity !== '' &&
+      (isNaN(parseInt(stock_quantity, 10)) || parseInt(stock_quantity, 10) < 0)) {
+    return 'Stock quantity must be a non-negative integer';
+  }
+  return null;
+}
+
+// ============================================================================
+// GET /api/products
+// Public – list active products with optional search/category/page filters
+// ============================================================================
+router.get('/', async (req, res, next) => {
+  try {
+    const { search, category_id, page = 1 } = req.query;
+    const limit = 12;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const offset = (pageNum - 1) * limit;
+
+    const conditions = ["p.status = 'active'"];
+    const params = [];
+
+    if (search && search.trim()) {
+      conditions.push('(p.product_name LIKE ? OR p.description LIKE ?)');
+      params.push(`%${search.trim()}%`, `%${search.trim()}%`);
+    }
+    if (category_id && !isNaN(parseInt(category_id, 10))) {
+      conditions.push('p.category_id = ?');
+      params.push(parseInt(category_id, 10));
+    }
+
+    const where = 'WHERE ' + conditions.join(' AND ');
+
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) AS total FROM products p ${where}`,
+      params
+    );
+
+    const [rows] = await db.query(
+      `SELECT p.product_id, p.product_name, p.price, p.stock_quantity, p.image,
+              c.category_name,
+              u.name AS seller_name,
+              p.created_at
+       FROM products p
+       JOIN categories c ON c.category_id = p.category_id
+       JOIN users u ON u.user_id = p.seller_id
+       ${where}
+       ORDER BY p.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    res.json({ success: true, products: rows, total, page: pageNum, limit });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// GET /api/products/my
+// Seller only – returns the authenticated seller's products (all statuses)
+// IMPORTANT: must be registered BEFORE /:id so 'my' is not treated as an id
+// ============================================================================
+router.get('/my', sellerOnly, async (req, res, next) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT p.product_id, p.product_name, p.price, p.stock_quantity,
+              p.image, p.status, p.created_at,
+              c.category_name
+       FROM products p
+       JOIN categories c ON c.category_id = p.category_id
+       WHERE p.seller_id = ?
+       ORDER BY p.created_at DESC`,
+      [req.user.id]
+    );
+    res.json({ success: true, products: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// GET /api/products/:id
+// Public – single product with category and seller info
+// ============================================================================
+router.get('/:id', async (req, res, next) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT p.product_id, p.product_name, p.description, p.price,
+              p.stock_quantity, p.image, p.status, p.created_at,
+              c.category_id, c.category_name,
+              u.user_id AS seller_id, u.name AS seller_name
+       FROM products p
+       JOIN categories c ON c.category_id = p.category_id
+       JOIN users u ON u.user_id = p.seller_id
+       WHERE p.product_id = ?`,
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, product: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// POST /api/products
+// Seller only – create a new product (multipart/form-data for image upload)
+// ============================================================================
+router.post('/', sellerOnly, upload.single('image'), async (req, res, next) => {
+  try {
+    const validationError = validateProduct(req.body);
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
+
+    const { product_name, category_id, price, stock_quantity, description } = req.body;
+
+    if (!category_id) {
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+
+    // Verify category exists and is active
+    const [cat] = await db.query(
+      "SELECT category_id FROM categories WHERE category_id = ? AND status = 'active'",
+      [category_id]
+    );
+    if (cat.length === 0) {
+      return res.status(400).json({ success: false, message: 'Category not found or inactive' });
+    }
+
+    const imageName = req.file ? req.file.filename : null;
+
+    const [result] = await db.query(
+      `INSERT INTO products
+         (seller_id, category_id, product_name, description, price, stock_quantity, image)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        req.user.id,
+        parseInt(category_id, 10),
+        String(product_name).trim(),
+        description ? String(description).trim() : null,
+        parseFloat(price),
+        stock_quantity !== undefined && stock_quantity !== '' ? parseInt(stock_quantity, 10) : 0,
+        imageName
+      ]
+    );
+
+    await logAction(req.user.id, 'PRODUCT_CREATE',
+      `Created product: "${String(product_name).trim()}" (ID ${result.insertId})`, req.ip);
+
+    res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      product_id: result.insertId
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// PUT /api/products/:id
+// Seller only – update product; ownership enforced via seller_id check in DB
+// ============================================================================
+router.put('/:id', sellerOnly, upload.single('image'), async (req, res, next) => {
+  try {
+    // Ownership check – fetch existing product and confirm this seller owns it
+    const [own] = await db.query(
+      'SELECT product_id, image FROM products WHERE product_id = ? AND seller_id = ?',
+      [req.params.id, req.user.id]
+    );
+    if (own.length === 0) {
+      return res.status(403).json({ success: false, message: 'Product not found or access denied' });
+    }
+
+    const validationError = validateProduct(req.body);
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
+
+    const { product_name, category_id, price, stock_quantity, description, status } = req.body;
+
+    if (status && !['active', 'inactive'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Status must be active or inactive' });
+    }
+
+    if (category_id) {
+      const [cat] = await db.query(
+        "SELECT category_id FROM categories WHERE category_id = ? AND status = 'active'",
+        [category_id]
+      );
+      if (cat.length === 0) {
+        return res.status(400).json({ success: false, message: 'Category not found or inactive' });
+      }
+    }
+
+    // Keep existing image if no new file uploaded
+    const imageName = req.file ? req.file.filename : own[0].image;
+
+    await db.query(
+      `UPDATE products SET
+         product_name   = ?,
+         category_id    = COALESCE(?, category_id),
+         description    = ?,
+         price          = ?,
+         stock_quantity = ?,
+         image          = ?,
+         status         = COALESCE(?, status)
+       WHERE product_id = ? AND seller_id = ?`,
+      [
+        String(product_name).trim(),
+        category_id ? parseInt(category_id, 10) : null,
+        description ? String(description).trim() : null,
+        parseFloat(price),
+        stock_quantity !== undefined && stock_quantity !== '' ? parseInt(stock_quantity, 10) : 0,
+        imageName,
+        status || null,
+        req.params.id,
+        req.user.id
+      ]
+    );
+
+    await logAction(req.user.id, 'PRODUCT_UPDATE',
+      `Updated product ID ${req.params.id}`, req.ip);
+
+    res.json({ success: true, message: 'Product updated successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================================
+// DELETE /api/products/:id
+// Seller only – soft delete (sets status = 'inactive'); ownership enforced
+// ============================================================================
+router.delete('/:id', sellerOnly, async (req, res, next) => {
+  try {
+    const [result] = await db.query(
+      "UPDATE products SET status = 'inactive' WHERE product_id = ? AND seller_id = ?",
+      [req.params.id, req.user.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(403).json({ success: false, message: 'Product not found or access denied' });
+    }
+    await logAction(req.user.id, 'PRODUCT_DELETE',
+      `Deactivated product ID ${req.params.id}`, req.ip);
+    res.json({ success: true, message: 'Product deactivated successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

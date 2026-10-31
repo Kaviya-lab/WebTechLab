@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seller Dashboard – Marketplace</title>
+  <meta name="description" content="Your seller dashboard: overview of products, orders and sales." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/seller.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <div id="loading" class="spinner"></div>
+
+    <div id="dashboard-content" class="hidden">
+      <!-- Welcome -->
+      <div class="page-header">
+        <div>
+          <h1 id="welcome-msg">Welcome back!</h1>
+          <p class="text-muted">Here's what's happening in your store today.</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats" id="stats-grid">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Quick-nav tiles -->
+      <h2 style="margin-top:32px;">Quick Actions</h2>
+      <div class="tiles">
+        <a href="/seller-products.html" class="tile">
+          <span class="tile-icon">📦</span>
+          <span class="tile-label">My Products</span>
+        </a>
+        <a href="/add-product.html" class="tile">
+          <span class="tile-icon">➕</span>
+          <span class="tile-label">Add Product</span>
+        </a>
+        <a href="/seller-orders.html" class="tile">
+          <span class="tile-icon">🚚</span>
+          <span class="tile-label">Manage Orders</span>
+        </a>
+        <a href="/seller-reports.html" class="tile">
+          <span class="tile-icon">📊</span>
+          <span class="tile-label">View Reports</span>
+        </a>
+      </div>
+    </div>
+
+    <div id="msg" class="alert hidden" style="margin-top:16px;"></div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Marketplace. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/seller-dashboard.js"></script>
+</body>
+</html>

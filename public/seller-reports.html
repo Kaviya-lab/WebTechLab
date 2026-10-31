@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Reports – Marketplace Seller</title>
+  <meta name="description" content="View your sales statistics and fulfillment reports." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/seller.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <div class="page-header">
+      <h1>My Sales Report</h1>
+    </div>
+
+    <div id="msg" class="alert hidden"></div>
+    <div id="loading" class="spinner"></div>
+
+    <div id="report-content" class="hidden">
+      <!-- Top stats -->
+      <div class="stats" id="stats-top"></div>
+
+      <!-- Fulfillment breakdown section -->
+      <h2 style="margin-top:32px;">Order Item Fulfillment</h2>
+      <div class="stats" id="stats-fulfillment"></div>
+
+      <!-- Optional Chart.js chart -->
+      <div class="chart-wrap" id="chart-section" style="display:none;">
+        <h3 style="margin-bottom:16px;">Fulfillment Breakdown</h3>
+        <canvas id="fulfillment-chart" height="120"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Marketplace. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <!-- Chart.js loaded from CDN only if available; gracefully omitted if offline -->
+  <script>
+    window._chartJsLoaded = false;
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    s.onload  = () => { window._chartJsLoaded = true; };
+    s.onerror = () => { window._chartJsLoaded = false; };
+    document.head.appendChild(s);
+  </script>
+  <script src="/js/seller-reports.js"></script>
+</body>
+</html>

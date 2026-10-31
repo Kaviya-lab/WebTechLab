@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Product – Marketplace Seller</title>
+  <meta name="description" content="Add or edit a product listing on Marketplace." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/seller.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <div class="page-header">
+      <h1 id="page-title">Add New Product</h1>
+      <a href="/seller-products.html" class="btn btn-outline">← My Products</a>
+    </div>
+
+    <div id="msg" class="alert hidden"></div>
+    <div id="loading" class="spinner hidden"></div>
+
+    <div class="card" style="max-width:680px;margin:0 auto;padding:28px;">
+      <form id="product-form" enctype="multipart/form-data" novalidate>
+
+        <div class="form-group">
+          <label for="product_name">Product Name <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="product_name" name="product_name" maxlength="200" required />
+          <div class="field-error" id="product_name-error"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="category_id">Category <span style="color:var(--danger)">*</span></label>
+          <select id="category_id" name="category_id" required>
+            <option value="">Select a category…</option>
+          </select>
+          <div class="field-error" id="category_id-error"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label for="price">Price (₹) <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="price" name="price" min="0" step="0.01" required />
+            <div class="field-error" id="price-error"></div>
+          </div>
+          <div class="form-group">
+            <label for="stock_quantity">Stock Quantity</label>
+            <input type="number" id="stock_quantity" name="stock_quantity" min="0" value="0" />
+            <div class="field-error" id="stock_quantity-error"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="4" maxlength="2000"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="image">Product Image <span class="text-muted">(max 5 MB, image files only)</span></label>
+          <input type="file" id="image" name="image" accept="image/*" />
+          <img id="img-preview" class="img-preview" alt="Image preview" />
+        </div>
+
+        <div class="form-group" id="status-group" style="display:none;">
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        <div class="flex" style="margin-top:8px;">
+          <button type="submit" class="btn" id="submit-btn">Create Product</button>
+          <a href="/seller-products.html" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Marketplace. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/add-product.js"></script>
+</body>
+</html>

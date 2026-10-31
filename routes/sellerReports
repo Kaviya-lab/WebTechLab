@@ -1,1 +1,82 @@
+// routes/sellerReports  (required by server.js as './routes/sellerReports')
+// Person B – Seller Reports API
+// Mounted at /api/seller-reports in server.js
 
+const express = require('express');
+const db = require('../config/db');
+const { authenticate, allowRoles } = require('../middleware/auth');
+
+const router = express.Router();
+
+const sellerOnly = [authenticate, allowRoles('seller')];
+
+// ============================================================================
+// GET /api/seller-reports/summary
+// Returns all key statistics for the authenticated seller.
+// Revenue = SUM(subtotal) for delivered items only.
+// Every query is scoped to seller_id = req.user.id.
+// ============================================================================
+router.get('/summary', sellerOnly, async (req, res, next) => {
+  try {
+    const sellerId = req.user.id;
+
+    // Total products owned by this seller (all statuses)
+    const [[{ total_products }]] = await db.query(
+      'SELECT COUNT(*) AS total_products FROM products WHERE seller_id = ?',
+      [sellerId]
+    );
+
+    // Total distinct orders containing this seller's items
+    const [[{ total_orders }]] = await db.query(
+      'SELECT COUNT(DISTINCT order_id) AS total_orders FROM order_items WHERE seller_id = ?',
+      [sellerId]
+    );
+
+    // Item counts per fulfillment status
+    const [statusRows] = await db.query(
+      `SELECT item_status, COUNT(*) AS cnt
+       FROM order_items
+       WHERE seller_id = ?
+       GROUP BY item_status`,
+      [sellerId]
+    );
+
+    const items_by_status = {
+      pending:    0,
+      processing: 0,
+      shipped:    0,
+      delivered:  0,
+      cancelled:  0
+    };
+    for (const row of statusRows) {
+      if (items_by_status.hasOwnProperty(row.item_status)) {
+        items_by_status[row.item_status] = Number(row.cnt);
+      }
+    }
+
+    // Revenue and fulfilled count – delivered items only, seller's own subtotals
+    const [[{ total_revenue, fulfilled_items }]] = await db.query(
+      `SELECT
+         COALESCE(SUM(subtotal), 0) AS total_revenue,
+         COUNT(*)                   AS fulfilled_items
+       FROM order_items
+       WHERE seller_id = ? AND item_status = 'delivered'`,
+      [sellerId]
+    );
+
+    res.json({
+      success: true,
+      summary: {
+        total_products:  Number(total_products),
+        total_orders:    Number(total_orders),
+        items_by_status,
+        fulfilled_items: Number(fulfilled_items),
+        total_revenue:   parseFloat(total_revenue).toFixed(2)
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;

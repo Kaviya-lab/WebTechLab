@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Products – Marketplace</title>
+  <meta name="description" content="Browse all products on Marketplace. Filter by category, search by name, and find great deals." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/seller.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <!-- Hero + search -->
+    <div class="hero">
+      <h1>Discover Products</h1>
+      <p>Find everything you need from our trusted sellers</p>
+      <div class="hero-search">
+        <input id="search-input" type="text" placeholder="Search products…" aria-label="Search products" />
+        <button class="btn" id="search-btn">Search</button>
+      </div>
+    </div>
+
+    <!-- Category chips -->
+    <div class="chip-bar" id="category-chips">
+      <button class="chip active" data-id="">All Categories</button>
+    </div>
+
+    <!-- Messages -->
+    <div id="msg" class="alert hidden"></div>
+
+    <!-- Product grid -->
+    <div id="loading" class="spinner"></div>
+    <div id="empty" class="empty-state hidden">
+      <div class="icon">🛒</div>
+      <h2>No products found</h2>
+      <p>Try a different search or category.</p>
+    </div>
+    <div id="product-grid" class="grid hidden"></div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="pagination hidden"></div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Marketplace. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/products.js"></script>
+</body>
+</html>

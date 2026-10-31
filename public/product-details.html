@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Details – Marketplace</title>
+  <meta name="description" content="View product details, pricing, availability and seller information." />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/seller.css" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <div id="loading" class="spinner"></div>
+    <div id="not-found" class="empty-state hidden">
+      <div class="icon">😕</div>
+      <h2>Product Not Found</h2>
+      <p><a href="/products.html">← Back to Products</a></p>
+    </div>
+
+    <div id="product-wrap" class="hidden">
+      <p><a href="/products.html">← Back to Products</a></p>
+
+      <div class="product-detail card mt" id="product-detail">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+
+    <div id="msg" class="alert hidden" style="margin-top:16px;"></div>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Marketplace. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/product-details.js"></script>
+</body>
+</html>
