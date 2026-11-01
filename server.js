@@ -11,6 +11,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes (add more here as you build them)
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/admin/orders', require('./routes/adminOrders'));
 
 // Unknown API route -> clean JSON 404
 app.use('/api', (req, res) => {
