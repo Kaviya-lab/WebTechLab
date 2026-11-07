@@ -2,7 +2,7 @@
 -- Seed data for Online Marketplace
 -- File: database/seed.sql
 --
--- HOW TO APPLY (after schema.sql and changes_B.sql):
+-- HOW TO APPLY (after schema.sql and the fulfillment migration):
 --   mysql -u root -p marketplace < database/seed.sql
 --
 -- Test login credentials (all accounts):
