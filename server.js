@@ -9,8 +9,33 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Routes (add more here as you build them)
-app.use('/api/auth', require('./routes/auth'));
+function mountRoute(prefix, modulePath) {
+  const route = require(modulePath);
+
+  if (typeof route !== 'function') {
+    console.warn(
+      `[routes] Skipping ${modulePath} at ${prefix}: expected an Express middleware function`
+    );
+    return;
+  }
+
+  app.use(prefix, route);
+}
+
+mountRoute('/api/auth', './routes/auth');
+mountRoute('/api/categories', './routes/categories');
+mountRoute('/api/products', './routes/products');
+mountRoute('/api/cart', './routes/cart');
+mountRoute('/api/orders', './routes/orders');
+mountRoute('/api/orders', './routes/sellerOrders');
+mountRoute('/api/profile', './routes/profile');
+mountRoute('/api/customers', './routes/customers');
+mountRoute('/api/sellers', './routes/sellers');
+mountRoute('/api/admins', './routes/admins');
+mountRoute('/api/reports', './routes/reports');
+mountRoute('/api/seller-reports', './routes/sellerReports');
+mountRoute('/api/logs', './routes/logs');
+mountRoute('/api/settings', './routes/settings');
 
 // Unknown API route -> clean JSON 404
 app.use('/api', (req, res) => {
@@ -30,20 +55,3 @@ db.query('SELECT 1')
   .catch(err => console.error('MySQL connection failed:', err.message));
 
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/cart', require('./routes/cart'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/orders', require('./routes/sellerOrders'));
-app.use('/api/profile', require('./routes/profile'));
-app.use('/api/customers', require('./routes/customers'));
-app.use('/api/sellers', require('./routes/sellers'));
-app.use('/api/admins', require('./routes/admins'));
-app.use('/api/reports', require('./routes/reports'));
-app.use('/api/seller-reports', require('./routes/sellerReports'));
-app.use('/api/logs', require('./routes/logs'));
-app.use('/api/settings', require('./routes/settings'));
