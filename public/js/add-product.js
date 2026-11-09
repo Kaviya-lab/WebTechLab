@@ -12,6 +12,20 @@
   const imgPreview = document.getElementById('img-preview');
   const statusGroup = document.getElementById('status-group');
 
+  function parsePrice(value) {
+    const text = value.trim();
+    if (!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(text)) return null;
+    const number = Number(text);
+    return Number.isFinite(number) && number >= 0 && number <= 99999999.99 ? number : null;
+  }
+
+  function parseStock(value) {
+    const text = value.trim();
+    if (!/^\d+$/.test(text)) return null;
+    const number = Number(text);
+    return Number.isSafeInteger(number) && number <= 2147483647 ? number : null;
+  }
+
   let editId = null; // null = create mode; number = edit mode
 
   // ── Image preview ───────────────────────────────────────────────────────────
@@ -91,12 +105,12 @@
       setFieldError('category_id', 'Please select a category');
       ok = false;
     }
-    if (price === '' || isNaN(parseFloat(price)) || parseFloat(price) < 0) {
-      setFieldError('price', 'Enter a valid price (≥ 0)');
+    if (parsePrice(price) === null) {
+      setFieldError('price', 'Enter a price from 0 to 99999999.99 with no more than 2 decimal places');
       ok = false;
     }
-    if (stock !== '' && (isNaN(parseInt(stock, 10)) || parseInt(stock, 10) < 0)) {
-      setFieldError('stock_quantity', 'Stock must be 0 or more');
+    if (parseStock(stock) === null) {
+      setFieldError('stock_quantity', 'Stock must be a whole number from 0 to 2147483647');
       ok = false;
     }
 

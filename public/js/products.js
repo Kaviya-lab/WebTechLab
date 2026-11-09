@@ -59,14 +59,15 @@
       ? `<img src="${imgSrc}" alt="${escapeHTML(p.product_name)}" loading="lazy" />`
       : `<div style="height:170px;display:flex;align-items:center;justify-content:center;background:var(--border);color:var(--muted);font-size:2.5rem;">📦</div>`;
 
-    const inStock = p.stock_quantity > 0;
+    const stock = Number(p.stock_quantity);
+    const inStock = Number.isSafeInteger(stock) && stock > 0;
     const stockBadge = inStock
       ? `<span class="badge-in">In Stock</span>`
       : `<span class="badge-out">Out of Stock</span>`;
 
     const user = getUser();
     const cartBtn = (user && user.role === 'customer' && inStock)
-      ? `<button class="btn btn-sm btn-success" data-id="${p.product_id}" data-name="${escapeHTML(p.product_name)}">Add to Cart</button>`
+      ? `<button class="btn btn-sm btn-success" data-id="${p.product_id}" data-name="${escapeHTML(p.product_name)}" data-stock="${stock}">Add to Cart</button>`
       : '';
 
     return `
@@ -125,13 +126,20 @@
     const btn = e.currentTarget;
     const productId = btn.dataset.id;
     const name = btn.dataset.name;
+    const quantity = 1;
+    const availableStock = Number(btn.dataset.stock);
+    if (!Number.isSafeInteger(quantity) || quantity <= 0 ||
+        !Number.isSafeInteger(availableStock) || quantity > availableStock) {
+      showMessage('msg', `Cannot add ${name}: enter a positive whole quantity within available stock.`, 'error');
+      return;
+    }
     btn.disabled = true;
     btn.textContent = 'Adding…';
 
     try {
       await api('/cart/items', {
         method: 'POST',
-        body: { product_id: parseInt(productId, 10), quantity: 1 }
+        body: { product_id: Number(productId), quantity }
       });
       btn.textContent = 'Added ✓';
       btn.classList.remove('btn-success');

@@ -30,18 +30,19 @@
         ? `<img src="${imgSrc}" alt="${escapeHTML(p.product_name)}" />`
         : `<div style="height:320px;display:flex;align-items:center;justify-content:center;background:var(--border);color:var(--muted);font-size:4rem;border-radius:var(--radius);">📦</div>`;
 
-      const inStock = p.stock_quantity > 0;
+      const availableStock = Number(p.stock_quantity);
+      const inStock = Number.isSafeInteger(availableStock) && availableStock > 0;
       const stockBadge = inStock
         ? `<span class="badge-in">In Stock (${escapeHTML(String(p.stock_quantity))} available)</span>`
         : `<span class="badge-out">Out of Stock</span>`;
 
       const user = getUser();
       let cartSection = '';
-      if (user && user.role === 'customer' && inStock) {
+      if (user && user.role === 'customer' && p.status === 'active' && inStock) {
         cartSection = `
           <div class="qty-row">
             <label for="qty"><strong>Quantity:</strong></label>
-            <input type="number" id="qty" min="1" max="${p.stock_quantity}" value="1" />
+            <input type="number" id="qty" min="1" max="${p.stock_quantity}" step="1" value="1" required />
           </div>
           <button class="btn btn-success" id="add-cart-btn" style="width:200px;">Add to Cart</button>`;
       } else if (!user) {
@@ -88,7 +89,14 @@
       const cartBtn = document.getElementById('add-cart-btn');
       if (cartBtn) {
         cartBtn.addEventListener('click', async () => {
-          const qty = parseInt(document.getElementById('qty').value, 10) || 1;
+          const qtyInput = document.getElementById('qty');
+          const rawQuantity = qtyInput.value.trim();
+          const qty = /^\d+$/.test(rawQuantity) ? Number(rawQuantity) : NaN;
+          if (!Number.isSafeInteger(qty) || qty <= 0 || qty > availableStock) {
+            showMessage('msg', `Enter a whole quantity from 1 to ${availableStock}.`, 'error');
+            qtyInput.focus();
+            return;
+          }
           cartBtn.disabled = true;
           cartBtn.textContent = 'Adding…';
           clearMessage('msg');
