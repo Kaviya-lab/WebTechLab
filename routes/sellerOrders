@@ -113,25 +113,32 @@ router.get('/seller', sellerOnly, async (req, res, next) => {
 //     happen atomically so they can never be out of sync
 // ============================================================================
 router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) => {
-  const conn = await db.getConnection();
+  let conn = null;
+  let transactionStarted = false;
+  let transactionCommitted = false;
   try {
     const { status } = req.body;
     const { order_item_id } = req.params;
 
     if (!status) {
-      conn.release();
-      return res.status(400).json({ success: false, message: 'status is required in request body' });
+      return res.status(400).json({
+        success: false,
+        message: 'status is required in request body'
+      });
     }
 
-    // 1. Fetch the item (includes seller_id from DB – never from request)
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+    transactionStarted = true;
+
+    // 1. Lock and fetch the item so concurrent transitions use its current status.
     const [items] = await conn.query(
       `SELECT order_item_id, seller_id, order_id, item_status
-       FROM order_items WHERE order_item_id = ?`,
+       FROM order_items WHERE order_item_id = ? FOR UPDATE`,
       [order_item_id]
     );
 
     if (items.length === 0) {
-      conn.release();
       return res.status(404).json({ success: false, message: 'Order item not found' });
     }
 
@@ -139,14 +146,12 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
 
     // 2. Ownership check – never trust seller_id from the request
     if (item.seller_id !== req.user.id) {
-      conn.release();
       return res.status(403).json({ success: false, message: 'Access denied: this item does not belong to you' });
     }
 
     // 3. Validate transition
     const allowed = ALLOWED_TRANSITIONS[item.item_status] || [];
     if (!allowed.includes(status)) {
-      conn.release();
       return res.status(400).json({
         success: false,
         message: `Cannot change status from '${item.item_status}' to '${status}'. ` +
@@ -154,9 +159,13 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
       });
     }
 
-    // 4. Begin transaction – update item + recalculate order status atomically
-    await conn.beginTransaction();
+    // Serialize updates to different items in the same order before aggregation.
+    await conn.query(
+      'SELECT order_id FROM orders WHERE order_id = ? FOR UPDATE',
+      [item.order_id]
+    );
 
+    // 4. Update item + recalculate order status atomically.
     await conn.query(
       'UPDATE order_items SET item_status = ? WHERE order_item_id = ?',
       [status, order_item_id]
@@ -175,13 +184,18 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
     );
 
     await conn.commit();
+    transactionCommitted = true;
 
-    await logAction(
-      req.user.id,
-      'ORDER_ITEM_STATUS',
-      `Order item ${order_item_id} status: ${item.item_status} → ${status} (order ${item.order_id} now ${newOrderStatus})`,
-      req.ip
-    );
+    try {
+      await logAction(
+        req.user.id,
+        'ORDER_ITEM_STATUS',
+        `Order item ${order_item_id} status: ${item.item_status} → ${status} (order ${item.order_id} now ${newOrderStatus})`,
+        req.ip
+      );
+    } catch (logErr) {
+      console.error('[sellerOrders] Could not log order item status update:', logErr);
+    }
 
     res.json({
       success: true,
@@ -192,10 +206,16 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
       order_id:      item.order_id
     });
   } catch (err) {
-    await conn.rollback().catch(() => {});
     next(err);
   } finally {
-    conn.release();
+    if (conn) {
+      if (transactionStarted && !transactionCommitted) {
+        await conn.rollback().catch(rollbackErr => {
+          console.error('[sellerOrders] Could not roll back status update:', rollbackErr);
+        });
+      }
+      conn.release();
+    }
   }
 });
 

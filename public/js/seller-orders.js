@@ -46,6 +46,9 @@
 
   // ── Render one order group (header + items table) ──────────────────────────
   function renderOrder(order) {
+    const shippingAddress = order.shipping_address && String(order.shipping_address).trim()
+      ? escapeHTML(String(order.shipping_address).trim())
+      : 'Not provided';
     const itemRows = order.items.map(item => `
       <tr data-item-id="${item.order_item_id}">
         <td>${escapeHTML(item.product_name)}</td>
@@ -62,6 +65,7 @@
           <strong>Order #${escapeHTML(String(order.order_id))}</strong>
           <span class="text-muted">${formatDate(order.order_date)}</span>
           <span>Customer: <strong>${escapeHTML(order.customer_name)}</strong></span>
+          <span>Ship to: ${shippingAddress}</span>
           <span>Overall: ${statusBadge(order.order_status)}</span>
         </div>
         <div class="table-wrap">
@@ -98,38 +102,43 @@
     btn.textContent = '…';
     clearMessage('msg');
 
+    let data;
     try {
-      const data = await api(`/orders/items/${itemId}/status`, {
+      data = await api(`/orders/items/${itemId}/status`, {
         method: 'PUT',
         body: { status: newStatus }
       });
-
-      // Update item row status badge + rebuild dropdown
-      const statusCell = tr.querySelector('.status-cell');
-      statusCell.innerHTML = statusBadge(data.item_status);
-
-      const actionCol = tr.querySelector('.action-col');
-      actionCol.innerHTML = transitionOptions(data.item_status);
-
-      // Rewire listeners on new dropdown
-      wireRow(tr);
-
-      // Update overall order badge in the group header
-      const orderGroup = document.getElementById(`order-${data.order_id}`);
-      if (orderGroup) {
-        const overallBadge = orderGroup.querySelector('.order-group-header .badge');
-        if (overallBadge) {
-          const span = overallBadge.parentElement;
-          span.innerHTML = `Overall: ${statusBadge(data.order_status)}`;
-        }
+      if (!data || data.success !== true) {
+        throw new Error(data && data.message ? data.message : 'The server did not confirm the status update.');
       }
-
-      showMessage('msg', `Item status updated to "${STATUS_LABELS[data.item_status]}".`, 'success');
     } catch (err) {
       showMessage('msg', err.message, 'error');
       btn.disabled = false;
       btn.textContent = 'Update';
+      return;
     }
+
+    // Update item row status badge + rebuild dropdown after server confirmation.
+    const statusCell = tr.querySelector('.status-cell');
+    statusCell.innerHTML = statusBadge(data.item_status);
+
+    const actionCol = tr.querySelector('.action-col');
+    actionCol.innerHTML = transitionOptions(data.item_status);
+
+    // Rewire listeners on new dropdown.
+    wireRow(tr);
+
+    // Update overall order badge in the group header.
+    const orderGroup = document.getElementById(`order-${data.order_id}`);
+    if (orderGroup) {
+      const overallBadge = orderGroup.querySelector('.order-group-header .badge');
+      if (overallBadge) {
+        const span = overallBadge.parentElement;
+        span.innerHTML = `Overall: ${statusBadge(data.order_status)}`;
+      }
+    }
+
+    showMessage('msg', `Item status updated to "${STATUS_LABELS[data.item_status]}".`, 'success');
   }
 
   // ── Wire event listeners on a single table row ──────────────────────────────
