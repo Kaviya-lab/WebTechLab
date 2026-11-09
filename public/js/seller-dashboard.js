@@ -19,12 +19,23 @@
     const user = requireRole('seller');
     if (!user) return;
 
-    document.getElementById('welcome-msg').textContent = `Welcome back, ${user.name}!`;
+    document.getElementById('welcome-msg').textContent =
+      `Welcome back, ${user.name || 'Seller'}!`;
 
     try {
       const data = await api('/seller-reports/summary');
-      loading.classList.add('hidden');
 
+      if (
+        !data ||
+        data.success !== true ||
+        !data.summary ||
+        !data.summary.items_by_status ||
+        typeof data.summary.items_by_status !== 'object'
+      ) {
+        throw new Error('Unable to load seller dashboard data.');
+      }
+
+      loading.classList.add('hidden');
       const s = data.summary;
       const pending = s.items_by_status.pending   || 0;
       const processing = s.items_by_status.processing || 0;

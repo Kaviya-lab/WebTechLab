@@ -34,9 +34,14 @@
   async function loadProducts() {
     try {
       const data = await api('/products/my');
+
+      if (!data || data.success !== true || !Array.isArray(data.products)) {
+        throw new Error('Unable to load seller products.');
+      }
+
       loading.classList.add('hidden');
 
-      if (!data.products || data.products.length === 0) {
+      if (data.products.length === 0) {
         empty.classList.remove('hidden');
         return;
       }
