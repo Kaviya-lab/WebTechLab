@@ -19,7 +19,7 @@ function parseQty(value) {
 }
 
 // GET /api/cart
-router.post(['/', '/items'], async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const cartId = await getCartId(req.user.id);
     const [items] = await db.query(
@@ -41,7 +41,7 @@ router.post(['/', '/items'], async (req, res, next) => {
 });
 
 // POST /api/cart  { product_id, quantity }
-router.post('/', async (req, res, next) => {
+router.post(['/', '/items'], async (req, res, next) => {
   try {
     const productId = Number(req.body.product_id);
     const qty = parseQty(req.body.quantity === undefined ? 1 : req.body.quantity);
