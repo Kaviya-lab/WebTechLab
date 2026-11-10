@@ -19,7 +19,7 @@ function parseQty(value) {
 }
 
 // GET /api/cart
-router.get('/', async (req, res, next) => {
+router.post(['/', '/items'], async (req, res, next) => {
   try {
     const cartId = await getCartId(req.user.id);
     const [items] = await db.query(
