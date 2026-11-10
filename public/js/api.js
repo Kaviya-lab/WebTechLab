@@ -86,7 +86,7 @@ async function api(path, options = {}) {
   }
 
   // Token missing/expired -> back to login (but not for the login call itself)
-  if (response.status === 401 && token) {
+  if (response.status === 401 && token && !path.startsWith('/auth/login')) {
     logout();
     throw new Error('Session expired. Please log in again.');
   }
