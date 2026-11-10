@@ -180,7 +180,8 @@ const NAV_LINKS = {
     ['My Products', '/seller-products.html'],
     ['Add Product', '/add-product.html'],
     ['Orders', '/seller-orders.html'],
-    ['Reports', '/seller-reports.html']
+    ['Reports', '/seller-reports.html'],
+    ['Profile', '/profile.html']
   ],
   admin: [
     ['Dashboard', '/admin-dashboard.html'],
@@ -188,6 +189,7 @@ const NAV_LINKS = {
     ['Sellers', '/manage-sellers.html'],
     ['Products', '/manage-products.html'],
     ['Categories', '/manage-categories.html'],
+    ['Orders', '/admin-orders.html'],
     ['Reports', '/admin-reports.html']
   ],
   superadmin: [
@@ -195,6 +197,7 @@ const NAV_LINKS = {
     ['Admins', '/manage-admins.html'],
     ['Logs', '/system-logs.html'],
     ['Settings', '/system-settings.html'],
+    ['Orders', '/admin-orders.html'],
     ['Reports', '/admin-reports.html']
   ]
 };
