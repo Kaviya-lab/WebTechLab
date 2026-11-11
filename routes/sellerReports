@@ -1,5 +1,5 @@
 // routes/sellerReports  (required by server.js as './routes/sellerReports')
-// Person B – Seller Reports API
+// Seller Reports API
 // Mounted at /api/seller-reports in server.js
 
 const express = require('express');
@@ -49,7 +49,7 @@ router.get('/summary', sellerOnly, async (req, res, next) => {
       cancelled:  0
     };
     for (const row of statusRows) {
-      if (items_by_status.hasOwnProperty(row.item_status)) {
+      if (Object.prototype.hasOwnProperty.call(items_by_status, row.item_status)) {
         items_by_status[row.item_status] = Number(row.cnt);
       }
     }

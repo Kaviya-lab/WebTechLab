@@ -1,7 +1,6 @@
 requireRole('admin', 'superadmin');
 
-// If your api.js fetch helper has another name, change it here only
-const call = (url, options) => apiFetch(url, options);
+const call = (url, options) => api(url, options);
 
 let sellers = [];
 let timer = null;
@@ -42,11 +41,11 @@ async function load() {
     const search = document.getElementById('search').value.trim();
     if (status) params.set('status', status);
     if (search) params.set('search', search);
-    const data = await call('/api/sellers?' + params.toString());
+    const data = await call('/sellers?' + params.toString());
     sellers = data.sellers;
     render();
   } catch (err) {
-    showMessage(err.message, 'error');
+    showMessage('message', err.message, 'error');
   }
 }
 
@@ -61,7 +60,7 @@ document.getElementById('body').addEventListener('click', async e => {
   if (!btn) return;
   btn.disabled = true;
   try {
-    const data = await call(`/api/sellers/${btn.dataset.id}/${btn.dataset.action}`, { method: 'PATCH' });
+    const data = await call(`/sellers/${btn.dataset.id}/${btn.dataset.action}`, { method: 'PATCH' });
     const s = sellers.find(x => String(x.user_id) === btn.dataset.id);
     if (s) s.status = data.status;
     // If a status filter is on and the row no longer matches, drop it
@@ -71,7 +70,7 @@ document.getElementById('body').addEventListener('click', async e => {
     showMessage(data.message, 'success');
   } catch (err) {
     btn.disabled = false;
-    showMessage(err.message, 'error');
+    showMessage('message', err.message, 'error');
   }
 });
 

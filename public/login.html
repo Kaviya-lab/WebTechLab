@@ -1,34 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Login</title>
-  <link rel="stylesheet" href="/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sign in to your Marketplace account." />
+  <title>Sign In – Marketplace</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/login.css" />
 </head>
 <body>
-  <div id="navbar"></div>
-  <main>
-    <div class="form-card">
-      <h2>Login</h2>
-      <div id="msg" class="alert hidden"></div>
+  <main class="login-main">
+    <section class="login-card" aria-labelledby="login-title">
+      <a class="login-brand" href="/index.html" aria-label="Marketplace home">
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <span>Marketplace</span>
+      </a>
+
+      <p class="eyebrow">Marketplace account</p>
+      <h1 id="login-title">Welcome back</h1>
+      <p class="login-intro">Sign in to continue to your account.</p>
+
+      <div id="login-error" class="login-error" role="alert"
+           aria-live="assertive" hidden></div>
+
       <form id="login-form" novalidate>
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" autocomplete="email">
-          <div class="field-error" id="email-error"></div>
+        <div class="login-field">
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email"
+                 autocomplete="username" inputmode="email"
+                 placeholder="you@example.com"
+                 aria-describedby="login-error" required />
         </div>
-        <div class="form-group">
+
+        <div class="login-field">
           <label for="password">Password</label>
-          <input type="password" id="password" autocomplete="current-password">
-          <div class="field-error" id="password-error"></div>
+          <div class="password-wrap">
+            <input id="password" name="password" type="password"
+                   autocomplete="current-password"
+                   placeholder="Enter your password"
+                   aria-describedby="login-error" required />
+            <button id="password-toggle" class="password-toggle"
+                    type="button" aria-controls="password"
+                    aria-pressed="false">Show</button>
+          </div>
         </div>
-        <button type="submit" class="btn btn-block" id="login-btn">Login</button>
+
+        <button id="login-submit" class="login-submit" type="submit">
+          <span id="submit-label">Sign in</span>
+          <span id="submit-spinner" class="button-spinner"
+                aria-hidden="true" hidden></span>
+        </button>
       </form>
-      <p class="mt text-center">New here? <a href="/register.html">Create an account</a></p>
-    </div>
+
+      <p class="login-footer">
+        New here? <a href="/register.html">Create an account</a>
+      </p>
+    </section>
   </main>
-  <footer>Online Marketplace &copy; 2026</footer>
 
   <script src="/js/api.js"></script>
   <script src="/js/login.js"></script>

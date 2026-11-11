@@ -2,7 +2,7 @@
 -- Seed data for Online Marketplace
 -- File: database/seed.sql
 --
--- HOW TO APPLY (after schema.sql and changes_B.sql):
+-- HOW TO APPLY (after schema.sql and the fulfillment migration):
 --   mysql -u root -p marketplace < database/seed.sql
 --
 -- Test login credentials (all accounts):
@@ -118,9 +118,8 @@ INSERT IGNORE INTO order_items
 VALUES
 (1, 1, 1,  3, 1, 2499.00, 2499.00, 'shipped'),   -- Headphones – TechZone / shipped
 (2, 1, 15, 5, 1,  299.00,  299.00, 'pending'),   -- Alchemist – BookWorld / still pending
-(3, 1, 8,  4, 3,  999.00, 3000.00, 'shipped');   -- wait, let's correct the total...
+(3, 1, 8,  4, 3,  999.00, 2997.00, 'shipped');
 
--- Fix: let's keep order totals consistent with what's inserted
 UPDATE orders SET total_amount = (
   SELECT SUM(subtotal) FROM order_items WHERE order_id = 1
 ) WHERE order_id = 1;

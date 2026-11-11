@@ -76,6 +76,7 @@
   border-radius: 999px;
   font-weight: 600;
 }
+.badge-processing { background: #fef3c7; color: #92400e; }
 
 /* ── Product detail page ── */
 .product-detail {
@@ -102,6 +103,16 @@
 
 /* ── Seller table actions ── */
 .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+.actions-cell .btn { white-space: nowrap; }
+
+/* ── Add/edit product field layout ── */
+.product-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+.product-fields-grid > .form-group { min-width: 0; }
 
 /* ── Product thumbnail ── */
 .thumb { width: 52px; height: 52px; object-fit: cover; border-radius: 6px; background: var(--border); }
@@ -132,6 +143,15 @@
 
 /* ── Status select in seller-orders ── */
 .status-select { font-size: 0.85rem; padding: 5px 8px; }
+.order-group .action-col { min-width: 220px; }
+.order-group .action-col .actions-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.order-group .action-col .status-select { width: auto; min-width: 0; max-width: 100%; }
+.order-group .action-col .update-btn { white-space: nowrap; }
 
 /* ── Order group header ── */
 .order-group { margin-bottom: 24px; }
@@ -147,7 +167,14 @@
   font-size: 0.9rem;
 }
 .order-group-header strong { font-size: 1rem; }
-.order-group .table-wrap { border-radius: 0 0 var(--radius) var(--radius); border-top: none; }
+.order-group .table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  border-radius: 0 0 var(--radius) var(--radius);
+  border-top: none;
+}
 
 /* ── Spinner ── */
 .spinner {
@@ -172,4 +199,17 @@
   .product-detail { grid-template-columns: 1fr; }
   .page-header { flex-direction: column; align-items: flex-start; }
   .tiles { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .product-fields-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  #table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+  #table-wrap table { min-width: 720px; }
+  #table-wrap .actions-cell { gap: 10px; }
+  .order-group .table-wrap table { min-width: 760px; }
+  .order-group .action-col { min-width: 240px; }
+}
+
+@media (max-width: 360px) {
+  #product-grid { grid-template-columns: minmax(0, 1fr); }
 }

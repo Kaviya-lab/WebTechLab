@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('../config/db');
 const { authenticate, allowRoles } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/role');
 
 const router = express.Router();
-const adminOnly = [authenticate, allowRoles('admin', 'superadmin')];
+const adminOnly = [authenticate, allowRoles('admin', 'superadmin'), requirePermission('manage_categories')];
 
 // GET /api/categories (public, active only)
 router.get('/', async (req, res, next) => {

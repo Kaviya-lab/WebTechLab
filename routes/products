@@ -1,5 +1,5 @@
 // routes/products  (required by server.js as './routes/products')
-// Person B – Product API
+// Product API
 // Mounted at /api/products in server.js
 
 const express = require('express');
@@ -42,16 +42,70 @@ const sellerOnly = [authenticate, allowRoles('seller')];
 function validateProduct(body) {
   const { product_name, price, stock_quantity } = body;
   if (!product_name || !String(product_name).trim()) {
-    return 'Product name is required';
+    return { error: 'Product name is required' };
   }
-  if (price === undefined || price === '' || isNaN(parseFloat(price)) || parseFloat(price) < 0) {
-    return 'Price must be a non-negative number';
+  const priceText = price === undefined || price === null ? '' : String(price).trim();
+  if (!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(priceText)) {
+    return { error: 'Price must be a non-negative number with no more than two decimal places' };
   }
-  if (stock_quantity !== undefined && stock_quantity !== '' &&
-      (isNaN(parseInt(stock_quantity, 10)) || parseInt(stock_quantity, 10) < 0)) {
-    return 'Stock quantity must be a non-negative integer';
+  const parsedPrice = Number(priceText);
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0 || parsedPrice > 99999999.99) {
+    return { error: 'Price must be between 0 and 99999999.99' };
   }
-  return null;
+  const stockText = stock_quantity === undefined || stock_quantity === null
+    ? '' : String(stock_quantity).trim();
+  if (!/^\d+$/.test(stockText)) {
+    return { error: 'Stock quantity must be a non-negative integer' };
+  }
+  const parsedStock = Number(stockText);
+  if (!Number.isSafeInteger(parsedStock) || parsedStock > 2147483647) {
+    return { error: 'Stock quantity must be between 0 and 2147483647' };
+  }
+  return { error: null, price: parsedPrice, stock_quantity: parsedStock };
+}
+
+function uploadPath(filename) {
+  if (typeof filename !== 'string' || !filename || path.basename(filename) !== filename) {
+    return null;
+  }
+  const target = path.resolve(uploadsDir, filename);
+  return path.dirname(target) === path.resolve(uploadsDir) ? target : null;
+}
+
+async function removeUploadedFile(filename, context) {
+  if (!filename) return;
+
+  const target = uploadPath(filename);
+  if (!target) {
+    console.warn(`[products] Skipped unsafe image cleanup (${context})`);
+    return;
+  }
+  try {
+    await fs.promises.unlink(target);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.error(`[products] Could not remove image ${filename} (${context}):`, err.message);
+    }
+  }
+}
+
+async function removeOldImageIfUnreferenced(filename, replacementFilename) {
+  if (!filename || filename === replacementFilename) return;
+  if (!uploadPath(filename)) {
+    console.warn('[products] Skipped unsafe old image cleanup');
+    return;
+  }
+  try {
+    const [[{ reference_count }]] = await db.query(
+      'SELECT COUNT(*) AS reference_count FROM products WHERE image = ?',
+      [filename]
+    );
+    if (Number(reference_count) === 0) {
+      await removeUploadedFile(filename, 'replaced product image');
+    }
+  } catch (err) {
+    console.error(`[products] Could not check/remove old image ${filename}:`, err.message);
+  }
 }
 
 // ============================================================================
@@ -65,7 +119,7 @@ router.get('/', async (req, res, next) => {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const offset = (pageNum - 1) * limit;
 
-    const conditions = ["p.status = 'active'"];
+    const conditions = ["p.status = 'active'", "c.status = 'active'", "u.status = 'active'"];
     const params = [];
 
     if (search && search.trim()) {
@@ -80,7 +134,11 @@ router.get('/', async (req, res, next) => {
     const where = 'WHERE ' + conditions.join(' AND ');
 
     const [[{ total }]] = await db.query(
-      `SELECT COUNT(*) AS total FROM products p ${where}`,
+      `SELECT COUNT(*) AS total
+       FROM products p
+       JOIN categories c ON c.category_id = p.category_id
+       JOIN users u ON u.user_id = p.seller_id
+       ${where}`,
       params
     );
 
@@ -136,8 +194,8 @@ router.get('/:id', async (req, res, next) => {
     const [rows] = await db.query(
       `SELECT p.product_id, p.product_name, p.description, p.price,
               p.stock_quantity, p.image, p.status, p.created_at,
-              c.category_id, c.category_name,
-              u.user_id AS seller_id, u.name AS seller_name
+              c.category_id, c.category_name, c.status AS category_status,
+              u.user_id AS seller_id, u.name AS seller_name, u.status AS seller_status
        FROM products p
        JOIN categories c ON c.category_id = p.category_id
        JOIN users u ON u.user_id = p.seller_id
@@ -158,15 +216,18 @@ router.get('/:id', async (req, res, next) => {
 // Seller only – create a new product (multipart/form-data for image upload)
 // ============================================================================
 router.post('/', sellerOnly, upload.single('image'), async (req, res, next) => {
+  let productCreated = false;
   try {
-    const validationError = validateProduct(req.body);
-    if (validationError) {
-      return res.status(400).json({ success: false, message: validationError });
+    const validation = validateProduct(req.body);
+    if (validation.error) {
+      await removeUploadedFile(req.file && req.file.filename, 'rejected product creation');
+      return res.status(400).json({ success: false, message: validation.error });
     }
 
     const { product_name, category_id, price, stock_quantity, description } = req.body;
 
     if (!category_id) {
+      await removeUploadedFile(req.file && req.file.filename, 'missing product category');
       return res.status(400).json({ success: false, message: 'Category is required' });
     }
 
@@ -176,6 +237,7 @@ router.post('/', sellerOnly, upload.single('image'), async (req, res, next) => {
       [category_id]
     );
     if (cat.length === 0) {
+      await removeUploadedFile(req.file && req.file.filename, 'invalid product category');
       return res.status(400).json({ success: false, message: 'Category not found or inactive' });
     }
 
@@ -190,11 +252,12 @@ router.post('/', sellerOnly, upload.single('image'), async (req, res, next) => {
         parseInt(category_id, 10),
         String(product_name).trim(),
         description ? String(description).trim() : null,
-        parseFloat(price),
-        stock_quantity !== undefined && stock_quantity !== '' ? parseInt(stock_quantity, 10) : 0,
+        validation.price,
+        validation.stock_quantity,
         imageName
       ]
     );
+    productCreated = true;
 
     await logAction(req.user.id, 'PRODUCT_CREATE',
       `Created product: "${String(product_name).trim()}" (ID ${result.insertId})`, req.ip);
@@ -205,6 +268,7 @@ router.post('/', sellerOnly, upload.single('image'), async (req, res, next) => {
       product_id: result.insertId
     });
   } catch (err) {
+    if (!productCreated) await removeUploadedFile(req.file && req.file.filename, 'failed product creation');
     next(err);
   }
 });
@@ -214,6 +278,9 @@ router.post('/', sellerOnly, upload.single('image'), async (req, res, next) => {
 // Seller only – update product; ownership enforced via seller_id check in DB
 // ============================================================================
 router.put('/:id', sellerOnly, upload.single('image'), async (req, res, next) => {
+  let productUpdated = false;
+  let previousImage = null;
+  let replacementImage = null;
   try {
     // Ownership check – fetch existing product and confirm this seller owns it
     const [own] = await db.query(
@@ -221,17 +288,21 @@ router.put('/:id', sellerOnly, upload.single('image'), async (req, res, next) =>
       [req.params.id, req.user.id]
     );
     if (own.length === 0) {
+      await removeUploadedFile(req.file && req.file.filename, 'product ownership check failed');
       return res.status(403).json({ success: false, message: 'Product not found or access denied' });
     }
+    previousImage = own[0].image;
 
-    const validationError = validateProduct(req.body);
-    if (validationError) {
-      return res.status(400).json({ success: false, message: validationError });
+    const validation = validateProduct(req.body);
+    if (validation.error) {
+      await removeUploadedFile(req.file && req.file.filename, 'rejected product update');
+      return res.status(400).json({ success: false, message: validation.error });
     }
 
     const { product_name, category_id, price, stock_quantity, description, status } = req.body;
 
     if (status && !['active', 'inactive'].includes(status)) {
+      await removeUploadedFile(req.file && req.file.filename, 'invalid product status');
       return res.status(400).json({ success: false, message: 'Status must be active or inactive' });
     }
 
@@ -241,12 +312,14 @@ router.put('/:id', sellerOnly, upload.single('image'), async (req, res, next) =>
         [category_id]
       );
       if (cat.length === 0) {
+        await removeUploadedFile(req.file && req.file.filename, 'invalid product category');
         return res.status(400).json({ success: false, message: 'Category not found or inactive' });
       }
     }
 
     // Keep existing image if no new file uploaded
     const imageName = req.file ? req.file.filename : own[0].image;
+    replacementImage = req.file ? req.file.filename : null;
 
     await db.query(
       `UPDATE products SET
@@ -262,20 +335,26 @@ router.put('/:id', sellerOnly, upload.single('image'), async (req, res, next) =>
         String(product_name).trim(),
         category_id ? parseInt(category_id, 10) : null,
         description ? String(description).trim() : null,
-        parseFloat(price),
-        stock_quantity !== undefined && stock_quantity !== '' ? parseInt(stock_quantity, 10) : 0,
+        validation.price,
+        validation.stock_quantity,
         imageName,
         status || null,
         req.params.id,
         req.user.id
       ]
     );
+    productUpdated = true;
+
+    if (req.file && previousImage && previousImage !== imageName) {
+      await removeOldImageIfUnreferenced(previousImage, replacementImage);
+    }
 
     await logAction(req.user.id, 'PRODUCT_UPDATE',
       `Updated product ID ${req.params.id}`, req.ip);
 
     res.json({ success: true, message: 'Product updated successfully' });
   } catch (err) {
+    if (!productUpdated) await removeUploadedFile(req.file && req.file.filename, 'failed product update');
     next(err);
   }
 });

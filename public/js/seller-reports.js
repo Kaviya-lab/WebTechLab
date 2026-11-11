@@ -20,8 +20,22 @@
   async function loadReport() {
     try {
       const data = await api('/seller-reports/summary');
-      loading.classList.add('hidden');
+
+      if (!data || data.success !== true || !data.summary) {
+        throw new Error('Unable to load seller report data.');
+      }
+
       const s = data.summary;
+
+      if (
+        !s ||
+        !s.items_by_status ||
+        typeof s.items_by_status !== 'object'
+        ) {
+          throw new Error('Seller report data is incomplete.');
+        }
+
+      loading.classList.add('hidden');
 
       // Top-level stats
       statsTop.innerHTML = [
@@ -58,7 +72,12 @@
       attempts++;
       if (window._chartJsLoaded && typeof Chart !== 'undefined') {
         clearInterval(interval);
-        drawChart(ib);
+        try {
+          drawChart(ib);
+          } catch (err) {
+              chartSection.style.display = 'none';
+              console.error('Unable to render seller fulfillment chart:', err);
+          }
       } else if (attempts > 15) {
         clearInterval(interval); // CDN unavailable – no chart, no error
       }
