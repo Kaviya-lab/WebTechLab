@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="navbar"></div>
+  <main>
+    <h1>Checkout</h1>
+    <div id="msg" class="alert hidden"></div>
+
+    <div id="checkout-area">
+      <div class="card">
+        <h2>Order summary</h2>
+        <div id="summary"><p class="text-muted">Loading...</p></div>
+      </div>
+
+      <div class="card mt">
+        <h2>Shipping address</h2>
+        <form id="checkout-form" novalidate>
+          <div class="form-group">
+            <label for="address_line">Address</label>
+            <input type="text" id="address_line" maxlength="255">
+            <div class="field-error" id="address_line-error"></div>
+          </div>
+          <div class="form-group">
+            <label for="city">City</label>
+            <input type="text" id="city" maxlength="100">
+            <div class="field-error" id="city-error"></div>
+          </div>
+          <div class="form-group">
+            <label for="state">State</label>
+            <input type="text" id="state" maxlength="100">
+            <div class="field-error" id="state-error"></div>
+          </div>
+          <div class="form-group">
+            <label for="pincode">Pincode</label>
+            <input type="text" id="pincode" maxlength="6" inputmode="numeric">
+            <div class="field-error" id="pincode-error"></div>
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" id="save-address" style="width:auto;"> Save this address to my profile</label>
+          </div>
+          <button type="submit" class="btn btn-success" id="place-btn" disabled>Place order</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="success" class="card text-center hidden"></div>
+  </main>
+  <footer>Online Marketplace &copy; 2026</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/checkout.js"></script>
+</body>
+</html>

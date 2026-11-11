@@ -3,20 +3,14 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { authenticate } = require('../middleware/auth');
-
+const { logAction } = require('../middleware/logger');
 const router = express.Router();
 
-// Simple logger (later move this to middleware/logger.js)
-async function logAction(userId, action, description, ip) {
-  try {
-    await db.query(
-      'INSERT INTO system_logs (user_id, action, description, ip_address) VALUES (?, ?, ?, ?)',
-      [userId, action, description, ip]
-    );
-  } catch (e) {
-    console.error('Log error:', e.message);
-  }
-}
+// Every permission an admin can be given (the super admin has all of them)
+const ALL_PERMISSIONS = [
+  'manage_customers', 'manage_sellers', 'manage_products', 'manage_categories',
+  'manage_orders', 'view_reports', 'view_logs'
+];
 
 // POST /api/auth/register  (customer and seller only)
 router.post('/register', async (req, res, next) => {
@@ -125,7 +119,21 @@ router.get('/me', authenticate, async (req, res, next) => {
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.json({ success: true, user: rows[0] });
+        const user = rows[0];
+
+    // Permissions the frontend uses to show or hide admin menu items
+    let permissions = [];
+    if (user.role === 'superadmin') {
+      permissions = ALL_PERMISSIONS;
+    } else if (user.role === 'admin') {
+      const [perms] = await db.query(
+        'SELECT permission_name FROM admin_permissions WHERE admin_id = ? ORDER BY permission_name',
+        [user.user_id]
+      );
+      permissions = perms.map((p) => p.permission_name);
+    }
+
+    res.json({ success: true, user: { ...user, permissions } });
   } catch (err) {
     next(err);
   }

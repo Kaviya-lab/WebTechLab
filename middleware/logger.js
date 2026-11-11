@@ -1,8 +1,6 @@
 // middleware/logger.js
 // Reusable activity logging helper – writes to system_logs table.
 // Matches the signature of the inline logAction used in routes/auth.js.
-// Person A may optionally replace their inline helper by requiring this module.
-
 const db = require('../config/db');
 
 /**

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Online Marketplace</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="navbar"></div>
+  <main>
+    <section class="hero">
+      <h1>Welcome to the Online Marketplace</h1>
+      <p>Buy from many sellers in one place.</p>
+      <p class="mt"><a class="btn btn-outline" style="background:#fff" href="/products.html">Browse all products</a></p>
+    </section>
+
+    <div id="msg" class="alert hidden"></div>
+
+    <h2>Shop by category</h2>
+    <div class="flex" id="categories"></div>
+
+    <h2 class="mt">Featured products</h2>
+    <div class="grid" id="featured"><p class="text-muted">Loading...</p></div>
+  </main>
+  <footer>Online Marketplace &copy; 2026</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/index.js"></script>
+</body>
+</html>

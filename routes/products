@@ -1,5 +1,5 @@
 // routes/products  (required by server.js as './routes/products')
-// Person B – Product API
+// Product API
 // Mounted at /api/products in server.js
 
 const express = require('express');

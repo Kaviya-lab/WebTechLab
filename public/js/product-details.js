@@ -22,7 +22,6 @@
 
       const p = data.product;
 
-      // Update page title
       document.title = `${p.product_name} – Marketplace`;
 
       const imgSrc = p.image ? `/uploads/${escapeHTML(p.image)}` : null;
@@ -85,7 +84,6 @@
 
       wrap.classList.remove('hidden');
 
-      // Wire add-to-cart
       const cartBtn = document.getElementById('add-cart-btn');
       if (cartBtn) {
         cartBtn.addEventListener('click', async () => {

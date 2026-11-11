@@ -49,7 +49,6 @@
       body.innerHTML = data.products.map(row).join('');
       tableWrap.classList.remove('hidden');
 
-      // Wire delete buttons
       tableWrap.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', deleteProduct);
       });
@@ -71,11 +70,9 @@
 
     try {
       await api(`/products/${id}`, { method: 'DELETE' });
-      // Remove row from table or reload
       const tr = tableWrap.querySelector(`tr[data-id="${id}"]`);
       if (tr) tr.remove();
       showMessage('msg', `"${name}" has been deactivated.`, 'success');
-      // Show empty state if table is now empty
       if (tableWrap.querySelectorAll('tbody tr').length === 0) {
         tableWrap.classList.add('hidden');
         empty.classList.remove('hidden');

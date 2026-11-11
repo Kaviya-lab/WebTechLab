@@ -3,69 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Sign in to manage your Marketplace seller account." />
-  <title>Seller Sign In – Marketplace</title>
+  <meta name="description" content="Sign in to your Marketplace account." />
+  <title>Sign In – Marketplace</title>
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/css/login.css" />
 </head>
 <body>
   <main class="login-main">
     <section class="login-card" aria-labelledby="login-title">
-      <a class="login-brand" href="/products.html" aria-label="Marketplace home">
+      <a class="login-brand" href="/index.html" aria-label="Marketplace home">
         <span class="brand-mark" aria-hidden="true">M</span>
         <span>Marketplace</span>
       </a>
 
-      <p class="eyebrow">Seller portal</p>
+      <p class="eyebrow">Marketplace account</p>
       <h1 id="login-title">Welcome back</h1>
-      <p class="login-intro">Sign in to manage your products, orders, and store reports.</p>
+      <p class="login-intro">Sign in to continue to your account.</p>
 
-      <div id="login-error" class="login-error" role="alert" aria-live="assertive" hidden></div>
+      <div id="login-error" class="login-error" role="alert"
+           aria-live="assertive" hidden></div>
 
       <form id="login-form" novalidate>
         <div class="login-field">
           <label for="email">Email address</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autocomplete="username"
-            inputmode="email"
-            placeholder="you@example.com"
-            aria-describedby="login-error"
-            required
-          />
+          <input id="email" name="email" type="email"
+                 autocomplete="username" inputmode="email"
+                 placeholder="you@example.com"
+                 aria-describedby="login-error" required />
         </div>
 
         <div class="login-field">
           <label for="password">Password</label>
           <div class="password-wrap">
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="Enter your password"
-              aria-describedby="login-error"
-              required
-            />
-            <button
-              id="password-toggle"
-              class="password-toggle"
-              type="button"
-              aria-controls="password"
-              aria-pressed="false"
-            >Show</button>
+            <input id="password" name="password" type="password"
+                   autocomplete="current-password"
+                   placeholder="Enter your password"
+                   aria-describedby="login-error" required />
+            <button id="password-toggle" class="password-toggle"
+                    type="button" aria-controls="password"
+                    aria-pressed="false">Show</button>
           </div>
         </div>
 
         <button id="login-submit" class="login-submit" type="submit">
           <span id="submit-label">Sign in</span>
-          <span id="submit-spinner" class="button-spinner" aria-hidden="true" hidden></span>
+          <span id="submit-spinner" class="button-spinner"
+                aria-hidden="true" hidden></span>
         </button>
       </form>
 
-      <p class="login-footer">Seller accounts must be active before signing in.</p>
+      <p class="login-footer">
+        New here? <a href="/register.html">Create an account</a>
+      </p>
     </section>
   </main>
 

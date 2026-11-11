@@ -1,5 +1,5 @@
 // routes/sellerReports  (required by server.js as './routes/sellerReports')
-// Person B – Seller Reports API
+// Seller Reports API
 // Mounted at /api/seller-reports in server.js
 
 const express = require('express');

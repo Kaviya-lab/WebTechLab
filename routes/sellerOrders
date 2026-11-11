@@ -1,6 +1,6 @@
 // routes/sellerOrders  (required by server.js as './routes/sellerOrders')
-// Person B – Seller Order Fulfillment Tracking API
-// Mounted at /api/orders in server.js (alongside Person A's routes/orders)
+// Seller order fulfillment tracking API
+// Mounted at /api/orders in server.js alongside customer order routes.
 
 const express = require('express');
 const db = require('../config/db');
@@ -23,7 +23,7 @@ const ALLOWED_TRANSITIONS = {
 };
 
 // ── Aggregate order_status from all item statuses for one order ──────────────
-// Rules agreed with Person A (document in integration contract):
+// Order status is derived from the fulfillment status of all items:
 //
 //   All items cancelled                          → 'cancelled'
 //   All non-cancelled items delivered            → 'delivered'

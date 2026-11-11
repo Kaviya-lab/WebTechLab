@@ -86,7 +86,7 @@ async function api(path, options = {}) {
   }
 
   // Token missing/expired -> back to login (but not for the login call itself)
-  if (response.status === 401 && token) {
+  if (response.status === 401 && token && !path.startsWith('/auth/login')) {
     logout();
     throw new Error('Session expired. Please log in again.');
   }
@@ -147,6 +147,15 @@ function statusBadge(status) {
   return `<span class="badge badge-${escapeHTML(status)}">${escapeHTML(status)}</span>`;
 }
 
+// Product image URL (images are stored as a file name in /uploads), or a grey placeholder
+const IMAGE_PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><rect width='100%' height='100%' fill='#e5e7eb'/>" +
+  "<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#6b7280' font-family='Arial' font-size='18'>No image</text></svg>"
+);
+function productImage(image) {
+  return image ? '/uploads/' + encodeURIComponent(image) : IMAGE_PLACEHOLDER;
+}
+
 // Read ?id=5 from the URL: getQueryParam('id')
 function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
@@ -171,7 +180,8 @@ const NAV_LINKS = {
     ['My Products', '/seller-products.html'],
     ['Add Product', '/add-product.html'],
     ['Orders', '/seller-orders.html'],
-    ['Reports', '/seller-reports.html']
+    ['Reports', '/seller-reports.html'],
+    ['Profile', '/profile.html']
   ],
   admin: [
     ['Dashboard', '/admin-dashboard.html'],
@@ -179,6 +189,7 @@ const NAV_LINKS = {
     ['Sellers', '/manage-sellers.html'],
     ['Products', '/manage-products.html'],
     ['Categories', '/manage-categories.html'],
+    ['Orders', '/admin-orders.html'],
     ['Reports', '/admin-reports.html']
   ],
   superadmin: [
@@ -186,6 +197,7 @@ const NAV_LINKS = {
     ['Admins', '/manage-admins.html'],
     ['Logs', '/system-logs.html'],
     ['Settings', '/system-settings.html'],
+    ['Orders', '/admin-orders.html'],
     ['Reports', '/admin-reports.html']
   ]
 };

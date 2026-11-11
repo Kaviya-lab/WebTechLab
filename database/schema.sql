@@ -81,6 +81,7 @@ CREATE TABLE order_items (
   quantity INT NOT NULL CHECK (quantity > 0),
   price DECIMAL(10,2) NOT NULL,
   subtotal DECIMAL(10,2) NOT NULL,
+  item_status ENUM('pending','processing','shipped','delivered','cancelled') NOT NULL DEFAULT 'pending',
   FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
   FOREIGN KEY (product_id) REFERENCES products(product_id),
   FOREIGN KEY (seller_id) REFERENCES users(user_id)

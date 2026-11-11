@@ -1,6 +1,12 @@
 (() => {
   'use strict';
 
+  const existing = getUser();
+  if (existing) {
+    redirectToDashboard(existing.role);
+    return;
+  }
+
   const form = document.getElementById('login-form');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
@@ -44,6 +50,7 @@
     if (isSubmitting) return;
 
     clearError();
+
     const email = emailInput.value.trim();
     const password = passwordInput.value;
 
@@ -52,11 +59,13 @@
       emailInput.focus();
       return;
     }
+
     if (!emailInput.validity.valid) {
       showError('Enter a valid email address.');
       emailInput.focus();
       return;
     }
+
     if (!password) {
       showError('Enter your password.');
       passwordInput.focus();
@@ -67,33 +76,17 @@
     setLoading(true);
 
     try {
-      // Remove stale session data without triggering logout's redirect.
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
-      localStorage.removeItem('name');
-
       const data = await api('/auth/login', {
         method: 'POST',
         body: { email, password }
       });
 
-      if (data.success !== true) {
-        showError(data.message || 'Unable to sign in. Please try again.');
-        return;
-      }
-
-      if (data.role !== 'seller') {
-        showError('This sign-in page is for seller accounts only.');
-        return;
-      }
-
-      if (!data.token) {
-        showError('The server response did not include a login token. Please try again.');
-        return;
+      if (!data.token || !data.role) {
+        throw new Error('The server returned an incomplete login response.');
       }
 
       saveSession(data);
-      window.location.href = '/seller-dashboard.html';
+      redirectToDashboard(data.role);
     } catch (error) {
       showError(error.message || 'Unable to sign in. Please try again.');
     } finally {

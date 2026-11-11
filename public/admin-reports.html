@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Reports</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .cards { display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0; }
+    .card { padding: 12px 16px; min-width: 150px; border: 1px solid #ddd; border-radius: 8px; }
+    .card b { display: block; font-size: 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Marketplace Reports</h1>
+  <p><a href="admin-dashboard.html">&larr; Dashboard</a></p>
+  <div id="message"></div>
+
+  <div>
+    <label>From <input type="date" id="from"></label>
+    <label>To <input type="date" id="to"></label>
+    <button id="apply">Apply</button>
+    <button id="clear">Clear</button>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="grid">
+    <div>
+      <h2>Orders per status</h2>
+      <table><thead><tr><th>Status</th><th>Orders</th></tr></thead><tbody id="statusBody"></tbody></table>
+    </div>
+    <div>
+      <h2>Top sellers</h2>
+      <table><thead><tr><th>Seller</th><th>Revenue</th></tr></thead><tbody id="sellersBody"></tbody></table>
+    </div>
+    <div>
+      <h2>Top categories</h2>
+      <table><thead><tr><th>Category</th><th>Revenue</th></tr></thead><tbody id="categoriesBody"></tbody></table>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/admin-reports.js"></script>
+</body>
+</html>

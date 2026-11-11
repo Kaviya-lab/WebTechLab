@@ -118,9 +118,8 @@ INSERT IGNORE INTO order_items
 VALUES
 (1, 1, 1,  3, 1, 2499.00, 2499.00, 'shipped'),   -- Headphones – TechZone / shipped
 (2, 1, 15, 5, 1,  299.00,  299.00, 'pending'),   -- Alchemist – BookWorld / still pending
-(3, 1, 8,  4, 3,  999.00, 3000.00, 'shipped');   -- wait, let's correct the total...
+(3, 1, 8,  4, 3,  999.00, 3000.00, 'shipped');
 
--- Fix: let's keep order totals consistent with what's inserted
 UPDATE orders SET total_amount = (
   SELECT SUM(subtotal) FROM order_items WHERE order_id = 1
 ) WHERE order_id = 1;
@@ -147,3 +146,7 @@ VALUES
 UPDATE orders SET total_amount = (
   SELECT SUM(subtotal) FROM order_items WHERE order_id = 3
 ) WHERE order_id = 3;
+
+-- Give the test admin the permissions needed for the admin module
+INSERT IGNORE INTO admin_permissions (admin_id, permission_name) VALUES
+(2,'manage_customers'),(2,'manage_sellers'),(2,'manage_orders'),(2,'view_reports');
