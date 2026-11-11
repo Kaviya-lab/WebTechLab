@@ -1,64 +1,28 @@
-requireRole('admin', 'superadmin');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manage Customers</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>Manage Customers</h1>
+  <p><a href="admin-dashboard.html">&larr; Dashboard</a></p>
+  <div id="message"></div>
 
-// If your api.js fetch helper has another name, change it here only
-const call = (url, options) => apiFetch(url, options);
+  <input id="search" type="search" placeholder="Search by name or email">
 
-let customers = [];
-let timer = null;
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Email</th><th>Mobile</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+      </thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
 
-function render() {
-  const body = document.getElementById('body');
-  if (customers.length === 0) {
-    body.innerHTML = '<tr><td colspan="7">No customers found</td></tr>';
-    return;
-  }
-  body.innerHTML = customers.map(c => {
-    const action = c.status === 'blocked' ? 'unblock' : 'block';
-    const label = c.status === 'blocked' ? 'Unblock' : 'Block';
-    return `<tr>
-      <td>${escapeHTML(String(c.user_id))}</td>
-      <td>${escapeHTML(c.name)}</td>
-      <td>${escapeHTML(c.email)}</td>
-      <td>${escapeHTML(c.mobile || '-')}</td>
-      <td>${statusBadge(c.status)}</td>
-      <td>${escapeHTML(formatDate(c.created_at))}</td>
-      <td><button data-id="${c.user_id}" data-action="${action}">${label}</button></td>
-    </tr>`;
-  }).join('');
-}
-
-async function load() {
-  try {
-    const q = encodeURIComponent(document.getElementById('search').value.trim());
-    const data = await call('/api/customers?search=' + q);
-    customers = data.customers;
-    render();
-  } catch (err) {
-    showMessage(err.message, 'error');
-  }
-}
-
-// Search while typing (waits 300 ms after the last key)
-document.getElementById('search').addEventListener('input', () => {
-  clearTimeout(timer);
-  timer = setTimeout(load, 300);
-});
-
-// One listener for all Block / Unblock buttons
-document.getElementById('body').addEventListener('click', async e => {
-  const btn = e.target.closest('button[data-action]');
-  if (!btn) return;
-  btn.disabled = true;
-  try {
-    const data = await call(`/api/customers/${btn.dataset.id}/${btn.dataset.action}`, { method: 'PATCH' });
-    const c = customers.find(x => String(x.user_id) === btn.dataset.id);
-    if (c) c.status = data.status;
-    render(); // updates the row without reloading the page
-    showMessage(data.message, 'success');
-  } catch (err) {
-    btn.disabled = false;
-    showMessage(err.message, 'error');
-  }
-});
-
-load();
+  <script src="/js/api.js"></script>
+  <script src="/js/manage-customers.js"></script>
+</body>
+</html>
