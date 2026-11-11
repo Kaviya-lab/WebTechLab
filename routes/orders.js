@@ -14,34 +14,38 @@ router.post('/', customerOnly, async (req, res, next) => {
     return res.status(400).json({ success: false, message: 'Shipping address must be 5 to 500 characters' });
   }
 
-  const conn = await db.getConnection();
+  let conn = null;
+  let transactionStarted = false;
+  let transactionCommitted = false;
   try {
+    conn = await db.getConnection();
     await conn.beginTransaction();
+    transactionStarted = true;
 
     // 1. Cart items, locking the product rows so stock cannot change under us
     const [items] = await conn.query(
       `SELECT ci.cart_item_id, ci.product_id, ci.quantity,
-              p.product_name, p.price, p.stock_quantity, p.seller_id, p.status
+              p.product_name, p.price, p.stock_quantity, p.seller_id, p.status,
+              u.status AS seller_status, cat.status AS category_status
        FROM cart c
        JOIN cart_items ci ON ci.cart_id = c.cart_id
        JOIN products p ON p.product_id = ci.product_id
+       JOIN users u ON u.user_id = p.seller_id
+       JOIN categories cat ON cat.category_id = p.category_id
        WHERE c.customer_id = ?
        FOR UPDATE`,
       [req.user.id]
     );
     if (items.length === 0) {
-      await conn.rollback();
       return res.status(400).json({ success: false, message: 'Your cart is empty' });
     }
 
     // 2. Re-check stock and availability
     for (const i of items) {
-      if (i.status !== 'active') {
-        await conn.rollback();
+      if (i.status !== 'active' || i.seller_status !== 'active' || i.category_status !== 'active') {
         return res.status(400).json({ success: false, message: `"${i.product_name}" is no longer available` });
       }
       if (i.quantity > i.stock_quantity) {
-        await conn.rollback();
         return res.status(400).json({ success: false, message: `Only ${i.stock_quantity} of "${i.product_name}" left in stock` });
       }
     }
@@ -70,13 +74,20 @@ router.post('/', customerOnly, async (req, res, next) => {
     await conn.query('DELETE FROM cart_items WHERE cart_item_id IN (?)', [items.map((i) => i.cart_item_id)]);
 
     await conn.commit();
+    transactionCommitted = true;
     await logAction(req.user.id, 'ORDER_PLACE', `Order ${orderId} placed, total ${total}`, req.ip);
     res.status(201).json({ success: true, message: 'Order placed', order_id: orderId, total_amount: total });
   } catch (err) {
-    await conn.rollback().catch(() => {});
     next(err);
   } finally {
-    conn.release();
+    if (conn) {
+      if (transactionStarted && !transactionCommitted) {
+        await conn.rollback().catch(rollbackErr => {
+          console.error('[orders] Could not roll back order creation:', rollbackErr);
+        });
+      }
+      conn.release();
+    }
   }
 });
 
@@ -109,16 +120,19 @@ router.get('/mine', customerOnly, async (req, res, next) => {
 
 // PUT /api/orders/:id/cancel  (only while no item is shipped or delivered)
 router.put('/:id/cancel', customerOnly, async (req, res, next) => {
-  const conn = await db.getConnection();
+  let conn = null;
+  let transactionStarted = false;
+  let transactionCommitted = false;
   try {
+    conn = await db.getConnection();
     await conn.beginTransaction();
+    transactionStarted = true;
 
     const [orders] = await conn.query(
       'SELECT order_id FROM orders WHERE order_id = ? AND customer_id = ? FOR UPDATE',
       [req.params.id, req.user.id]
     );
     if (orders.length === 0) {
-      await conn.rollback();
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
@@ -127,12 +141,10 @@ router.put('/:id/cancel', customerOnly, async (req, res, next) => {
       [req.params.id]
     );
     if (items.some((i) => ['shipped', 'delivered'].includes(i.item_status))) {
-      await conn.rollback();
       return res.status(400).json({ success: false, message: 'Cannot cancel: an item has already shipped' });
     }
     const toCancel = items.filter((i) => i.item_status !== 'cancelled');
     if (toCancel.length === 0) {
-      await conn.rollback();
       return res.status(400).json({ success: false, message: 'Order is already cancelled' });
     }
 
@@ -144,13 +156,20 @@ router.put('/:id/cancel', customerOnly, async (req, res, next) => {
     await recalculateOrderStatus(conn, req.params.id);
 
     await conn.commit();
+    transactionCommitted = true;
     await logAction(req.user.id, 'ORDER_CANCEL', `Order ${req.params.id} cancelled by customer`, req.ip);
     res.json({ success: true, message: 'Order cancelled' });
   } catch (err) {
-    await conn.rollback().catch(() => {});
     next(err);
   } finally {
-    conn.release();
+    if (conn) {
+      if (transactionStarted && !transactionCommitted) {
+        await conn.rollback().catch(rollbackErr => {
+          console.error('[orders] Could not roll back order cancellation:', rollbackErr);
+        });
+      }
+      conn.release();
+    }
   }
 });
 

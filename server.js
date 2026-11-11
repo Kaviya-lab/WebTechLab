@@ -42,8 +42,8 @@ function mount(prefix, file) {
 mount('/api/auth', './routes/auth');
 mount('/api/categories', './routes/categories');
 mount('/api/products', './routes/products');
-mount('/api/cart', './routes/cart');
-mount('/api/orders', './routes/orders');
+mount('/api/cart', './routes/cart.js');
+mount('/api/orders', './routes/orders.js');
 mount('/api/orders', './routes/sellerOrders');
 
 // Admin order monitoring.
@@ -51,13 +51,13 @@ mount('/api/admin/orders', './routes/adminOrders');
 
 // Seller and account routes.
 mount('/api/seller-reports', './routes/sellerReports');
-mount('/api/profile', './routes/profile');
-mount('/api/customers', './routes/customers');
-mount('/api/sellers', './routes/sellers');
+mount('/api/profile', './routes/profile.js');
+mount('/api/customers', './routes/customers.js');
+mount('/api/sellers', './routes/sellers.js');
 
 // Admin and system routes.
 mount('/api/admins', './routes/admins');
-mount('/api/reports', './routes/reports');
+mount('/api/reports', './routes/reports.js');
 mount('/api/logs', './routes/logs');
 mount('/api/settings', './routes/settings');
 

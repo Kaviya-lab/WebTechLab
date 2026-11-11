@@ -6,6 +6,7 @@ const express = require('express');
 const db = require('../config/db');
 const { authenticate, allowRoles } = require('../middleware/auth');
 const { logAction } = require('../middleware/logger');
+const { recalculateOrderStatus } = require('../utils/orderStatus');
 
 const router = express.Router();
 
@@ -21,25 +22,6 @@ const ALLOWED_TRANSITIONS = {
   delivered:  [],      // terminal
   cancelled:  []       // terminal
 };
-
-// ── Aggregate order_status from all item statuses for one order ──────────────
-// Order status is derived from the fulfillment status of all items:
-//
-//   All items cancelled                          → 'cancelled'
-//   All non-cancelled items delivered            → 'delivered'
-//   Any non-cancelled item shipped (none delivered yet) → 'shipped'
-//   Any non-cancelled item processing            → 'confirmed'
-//   All non-cancelled items pending              → 'pending'
-//
-function calcOrderStatus(allItemStatuses) {
-  const nonCancelled = allItemStatuses.filter(s => s !== 'cancelled');
-
-  if (nonCancelled.length === 0)                          return 'cancelled';
-  if (nonCancelled.every(s => s === 'delivered'))         return 'delivered';
-  if (nonCancelled.some(s => s === 'shipped'))            return 'shipped';
-  if (nonCancelled.some(s => s === 'processing'))         return 'confirmed';
-  return 'pending';
-}
 
 // ============================================================================
 // GET /api/orders/seller
@@ -131,10 +113,9 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
     await conn.beginTransaction();
     transactionStarted = true;
 
-    // 1. Lock and fetch the item so concurrent transitions use its current status.
+    // Lock the order first to match the customer cancellation lock order.
     const [items] = await conn.query(
-      `SELECT order_item_id, seller_id, order_id, item_status
-       FROM order_items WHERE order_item_id = ? FOR UPDATE`,
+      'SELECT order_id FROM order_items WHERE order_item_id = ?',
       [order_item_id]
     );
 
@@ -142,7 +123,24 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
       return res.status(404).json({ success: false, message: 'Order item not found' });
     }
 
-    const item = items[0];
+    const orderId = items[0].order_id;
+    const [orders] = await conn.query(
+      'SELECT order_id FROM orders WHERE order_id = ? FOR UPDATE',
+      [orderId]
+    );
+    if (orders.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const [lockedItems] = await conn.query(
+      `SELECT order_item_id, seller_id, order_id, item_status
+       FROM order_items WHERE order_item_id = ? AND order_id = ? FOR UPDATE`,
+      [order_item_id, orderId]
+    );
+    if (lockedItems.length === 0) {
+      return res.status(404).json({ success: false, message: 'Order item not found' });
+    }
+    const item = lockedItems[0];
 
     // 2. Ownership check – never trust seller_id from the request
     if (item.seller_id !== req.user.id) {
@@ -159,12 +157,6 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
       });
     }
 
-    // Serialize updates to different items in the same order before aggregation.
-    await conn.query(
-      'SELECT order_id FROM orders WHERE order_id = ? FOR UPDATE',
-      [item.order_id]
-    );
-
     // 4. Update item + recalculate order status atomically.
     await conn.query(
       'UPDATE order_items SET item_status = ? WHERE order_item_id = ?',
@@ -172,16 +164,7 @@ router.put('/items/:order_item_id/status', sellerOnly, async (req, res, next) =>
     );
 
     // Fetch all item statuses for this order (including the just-updated row)
-    const [allItems] = await conn.query(
-      'SELECT item_status FROM order_items WHERE order_id = ?',
-      [item.order_id]
-    );
-    const newOrderStatus = calcOrderStatus(allItems.map(i => i.item_status));
-
-    await conn.query(
-      'UPDATE orders SET order_status = ? WHERE order_id = ?',
-      [newOrderStatus, item.order_id]
-    );
+    const newOrderStatus = await recalculateOrderStatus(conn, item.order_id);
 
     await conn.commit();
     transactionCommitted = true;

@@ -31,7 +31,7 @@ const DASHBOARDS = {
   customer: '/customer-dashboard.html',
   seller: '/seller-dashboard.html',
   admin: '/admin-dashboard.html',
-  superadmin: '/superadmin-dashboard.html'
+  superadmin: '/admin-dashboard.html'
 };
 
 function redirectToDashboard(role) {
@@ -186,17 +186,14 @@ const NAV_LINKS = {
   admin: [
     ['Dashboard', '/admin-dashboard.html'],
     ['Customers', '/manage-customers.html'],
-    ['Sellers', '/manage-sellers.html'],
-    ['Products', '/manage-products.html'],
-    ['Categories', '/manage-categories.html'],
+    ['Sellers', '/manage_sellers.html'],
     ['Orders', '/admin-orders.html'],
     ['Reports', '/admin-reports.html']
   ],
   superadmin: [
-    ['Dashboard', '/superadmin-dashboard.html'],
-    ['Admins', '/manage-admins.html'],
-    ['Logs', '/system-logs.html'],
-    ['Settings', '/system-settings.html'],
+    ['Dashboard', '/admin-dashboard.html'],
+    ['Customers', '/manage-customers.html'],
+    ['Sellers', '/manage_sellers.html'],
     ['Orders', '/admin-orders.html'],
     ['Reports', '/admin-reports.html']
   ]

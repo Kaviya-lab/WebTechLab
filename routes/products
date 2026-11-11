@@ -119,7 +119,7 @@ router.get('/', async (req, res, next) => {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const offset = (pageNum - 1) * limit;
 
-    const conditions = ["p.status = 'active'", "c.status = 'active'"];
+    const conditions = ["p.status = 'active'", "c.status = 'active'", "u.status = 'active'"];
     const params = [];
 
     if (search && search.trim()) {
@@ -137,6 +137,7 @@ router.get('/', async (req, res, next) => {
       `SELECT COUNT(*) AS total
        FROM products p
        JOIN categories c ON c.category_id = p.category_id
+       JOIN users u ON u.user_id = p.seller_id
        ${where}`,
       params
     );
@@ -193,8 +194,8 @@ router.get('/:id', async (req, res, next) => {
     const [rows] = await db.query(
       `SELECT p.product_id, p.product_name, p.description, p.price,
               p.stock_quantity, p.image, p.status, p.created_at,
-              c.category_id, c.category_name,
-              u.user_id AS seller_id, u.name AS seller_name
+              c.category_id, c.category_name, c.status AS category_status,
+              u.user_id AS seller_id, u.name AS seller_name, u.status AS seller_status
        FROM products p
        JOIN categories c ON c.category_id = p.category_id
        JOIN users u ON u.user_id = p.seller_id

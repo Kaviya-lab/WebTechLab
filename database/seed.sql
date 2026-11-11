@@ -118,7 +118,7 @@ INSERT IGNORE INTO order_items
 VALUES
 (1, 1, 1,  3, 1, 2499.00, 2499.00, 'shipped'),   -- Headphones – TechZone / shipped
 (2, 1, 15, 5, 1,  299.00,  299.00, 'pending'),   -- Alchemist – BookWorld / still pending
-(3, 1, 8,  4, 3,  999.00, 3000.00, 'shipped');
+(3, 1, 8,  4, 3,  999.00, 2997.00, 'shipped');
 
 UPDATE orders SET total_amount = (
   SELECT SUM(subtotal) FROM order_items WHERE order_id = 1

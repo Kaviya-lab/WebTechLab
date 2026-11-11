@@ -2,14 +2,14 @@
 // Order status rules used by seller fulfillment in routes/sellerOrders:
 //   all items cancelled                    -> cancelled
 //   all non-cancelled items delivered      -> delivered
-//   any non-cancelled item shipped         -> shipped
+//   any non-cancelled item shipped/delivered -> shipped
 //   any non-cancelled item processing      -> confirmed
 //   otherwise                              -> pending
 function calcOrderStatus(itemStatuses) {
   const active = itemStatuses.filter((s) => s !== 'cancelled');
   if (active.length === 0) return 'cancelled';
   if (active.every((s) => s === 'delivered')) return 'delivered';
-  if (active.some((s) => s === 'shipped')) return 'shipped';
+  if (active.some((s) => s === 'shipped' || s === 'delivered')) return 'shipped';
   if (active.some((s) => s === 'processing')) return 'confirmed';
   return 'pending';
 }

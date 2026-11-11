@@ -1,6 +1,6 @@
 requireRole('admin', 'superadmin');
 
-const call = (url, options) => apiFetch(url, options);
+const call = (url, options) => api(url, options);
 
 const LABELS = [
   ['total_users', 'Total users'],
@@ -19,7 +19,7 @@ function rows(list, build, emptyCols) {
 }
 
 async function load() {
-  showMessage('', 'info');
+  clearMessage('message');
   const params = new URLSearchParams();
   const from = document.getElementById('from').value;
   const to = document.getElementById('to').value;
@@ -27,7 +27,7 @@ async function load() {
   if (to) params.set('to', to);
 
   try {
-    const data = await call('/api/reports/summary?' + params.toString());
+    const data = await call('/reports/summary?' + params.toString());
 
     document.getElementById('cards').innerHTML = LABELS.map(([key, label]) => {
       const v = key === 'total_revenue' ? money(data.summary[key]) : data.summary[key];
@@ -50,7 +50,7 @@ async function load() {
       2
     );
   } catch (err) {
-    showMessage(err.message, 'error'); // includes the 403 message for admins without view_reports
+    showMessage('message', err.message, 'error'); // includes the 403 message for admins without view_reports
   }
 }
 

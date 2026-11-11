@@ -1,6 +1,6 @@
 requireRole('admin', 'superadmin');
 
-const call = (url, options) => apiFetch(url, options);
+const call = (url, options) => api(url, options);
 
 let customers = [];
 let timer = null;
@@ -29,11 +29,11 @@ function render() {
 async function load() {
   try {
     const q = encodeURIComponent(document.getElementById('search').value.trim());
-    const data = await call('/api/customers?search=' + q);
+    const data = await call('/customers?search=' + q);
     customers = data.customers;
     render();
   } catch (err) {
-    showMessage(err.message, 'error');
+    showMessage('message', err.message, 'error');
   }
 }
 
@@ -49,14 +49,14 @@ document.getElementById('body').addEventListener('click', async e => {
   if (!btn) return;
   btn.disabled = true;
   try {
-    const data = await call(`/api/customers/${btn.dataset.id}/${btn.dataset.action}`, { method: 'PATCH' });
+    const data = await call(`/customers/${btn.dataset.id}/${btn.dataset.action}`, { method: 'PATCH' });
     const c = customers.find(x => String(x.user_id) === btn.dataset.id);
     if (c) c.status = data.status;
     render(); // updates the row without reloading the page
     showMessage(data.message, 'success');
   } catch (err) {
     btn.disabled = false;
-    showMessage(err.message, 'error');
+    showMessage('message', err.message, 'error');
   }
 });
 

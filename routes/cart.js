@@ -52,7 +52,9 @@ router.post(['/', '/items'], async (req, res, next) => {
     const [products] = await db.query(
       `SELECT p.product_id, p.price, p.stock_quantity FROM products p
        JOIN users u ON u.user_id = p.seller_id
-       WHERE p.product_id = ? AND p.status = 'active' AND u.status = 'active'`,
+       JOIN categories c ON c.category_id = p.category_id
+       WHERE p.product_id = ? AND p.status = 'active'
+         AND u.status = 'active' AND c.status = 'active'`,
       [productId]
     );
     if (products.length === 0) {
