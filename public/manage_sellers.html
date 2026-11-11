@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manage Sellers</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>Manage Sellers</h1>
+  <p><a href="admin-dashboard.html">&larr; Dashboard</a></p>
+  <div id="message"></div>
+
+  <input id="search" type="search" placeholder="Search by name or email">
+  <select id="status">
+    <option value="">All statuses</option>
+    <option value="pending">Pending</option>
+    <option value="active">Active</option>
+    <option value="blocked">Blocked</option>
+    <option value="rejected">Rejected</option>
+    <option value="inactive">Inactive</option>
+  </select>
+
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Email</th><th>Mobile</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/manage-sellers.js"></script>
+</body>
+</html>

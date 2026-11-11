@@ -147,3 +147,7 @@ VALUES
 UPDATE orders SET total_amount = (
   SELECT SUM(subtotal) FROM order_items WHERE order_id = 3
 ) WHERE order_id = 3;
+
+-- Give the test admin the permissions needed for the admin module
+INSERT IGNORE INTO admin_permissions (admin_id, permission_name) VALUES
+(2,'manage_customers'),(2,'manage_sellers'),(2,'manage_orders'),(2,'view_reports');
